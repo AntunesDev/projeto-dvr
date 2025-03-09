@@ -87,9 +87,13 @@ Você verá a interface exibindo **4 vídeos RTSP** com **textos gerados automat
 ## **📌 Funcionalidades**
 
 ✅ **Exibe até 4 câmeras DVR em um grid 2x4 (RTSP → HLS)**
+
 ✅ **Analisa as cenas usando YOLO e gera descrições automáticas**
+
 ✅ **Evita repetições desnecessárias no feedback da IA**
+
 ✅ **Mantém as streams estáveis para evitar travamentos**
+
 ✅ **Suporte a reconexão automática das câmeras**
 
 ---
