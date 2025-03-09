@@ -133,6 +133,29 @@
 
         startStream();
     </script>
+    <script>
+        function loadComments() {
+            const commentAreas = {
+                "cmt1": "video1",
+                "cmt2": "video2",
+                "cmt3": "video3",
+                "cmt4": "video4"
+            };
+    
+            Object.keys(commentAreas).forEach(id => {
+                fetch(`http://localhost:3000/comments/${commentAreas[id]}`)
+                    .then(response => response.text())
+                    .then(text => {
+                        document.getElementById(id).value = text;
+                    })
+                    .catch(error => console.error(`Erro ao carregar comentário para ${id}:`, error));
+            });
+        }
+    
+        setInterval(loadComments, 5000);
+    
+        loadComments();
+    </script>
 
 </body>
 </html>

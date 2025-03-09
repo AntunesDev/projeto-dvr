@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "node server.js",
+    "ai": "python video_ai.py",
+    "pip": "pip install -r requirements.txt"
   },
   "repository": {
     "type": "git",

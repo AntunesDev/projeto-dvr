@@ -135,3 +135,7 @@ dist
 
 # package lock
 package-lock.json
+
+# python
+venv/
+yolov*

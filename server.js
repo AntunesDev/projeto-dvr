@@ -17,7 +17,7 @@ function limparArquivosAntigos() {
     console.log("Limpando arquivos antigos...");
     try {
         fs.readdirSync("public").forEach(file => {
-            if (file.startsWith("stream") || file.endsWith(".ts")) {
+            if (file.startsWith("stream") || file.endsWith(".ts") || file.startsWith("video")) {
                 fs.unlinkSync(`public/${file}`);
             }
         });
@@ -53,8 +53,9 @@ app.get("/stream", (req, res) => {
             "-strict", "experimental",
             "-f", "hls",
             "-hls_time", "4",
-            "-hls_list_size", "6",
-            "-hls_flags", "delete_segments",
+            "-hls_list_size", "10",
+            "-hls_delete_threshold", "2",
+            "-hls_flags", "split_by_time+program_date_time",
             "-hls_allow_cache", "1",
             `public/stream${channel}.m3u8`
         ]);
@@ -72,7 +73,17 @@ app.get("/stream", (req, res) => {
     res.send("Streams iniciados!");
 });
 
-// Iniciar servidor
+app.get("/comments/:videoId", (req, res) => {
+    const { videoId } = req.params;
+    const filePath = `public/${videoId}.txt`;
+
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath, { root: "." });
+    } else {
+        res.send("Aguardando análise...");
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
