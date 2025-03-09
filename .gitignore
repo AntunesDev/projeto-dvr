@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# stream
+*.m3u8
+*.ts
+
+# package lock
+package-lock.json
