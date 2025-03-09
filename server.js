@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const { spawn } = require("child_process");
 const fs = require("fs");
+
+const { spawn } = require("child_process");
 
 const app = express();
 const PORT = 3000;
@@ -12,7 +13,6 @@ app.use(express.static("public"));
 const channels = [1, 2, 3, 4];
 let ffmpegProcesses = {};
 
-// Função para apagar arquivos antigos antes de iniciar um novo stream
 function limparArquivosAntigos() {
     console.log("Limpando arquivos antigos...");
     try {
@@ -27,13 +27,17 @@ function limparArquivosAntigos() {
     }
 }
 
+const rtspIp = '192.168.1.10';
+const rstpPort = '554';
+const rtspUser = 'admin';
+const rtspPassword = '';
+
 app.get("/stream", (req, res) => {
     limparArquivosAntigos();
 
     channels.forEach(channel => {
-        const rtspUrl = `rtsp://admin@192.168.1.10:554/user=admin&password=&channel=${channel}&stream=1.sdp?real_stream--rtp-caching=100`;
+        const rtspUrl = `rtsp://${rtspUser}@${rtspIp}:${rstpPort}/user=${rtspUser}&password=${rtspPassword}&channel=${channel}&stream=1.sdp?real_stream--rtp-caching=100`;
 
-        // Se já houver um processo rodando para este canal, não reinicia
         if (ffmpegProcesses[channel]) {
             return;
         }
@@ -71,4 +75,16 @@ app.get("/stream", (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
+});
+
+process.on("SIGINT", () => {
+    console.log("\nServidor encerrando... Limpando arquivos antigos.");
+    limparArquivosAntigos();
+    process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+    console.log("\nRecebido SIGTERM, limpando arquivos...");
+    limparArquivosAntigos();
+    process.exit(0);
 });
