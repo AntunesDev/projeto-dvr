@@ -147,6 +147,9 @@
                     .then(response => response.text())
                     .then(text => {
                         document.getElementById(id).value = text;
+
+                        const scrollToBottom = t=>t.scrollTop=t.scrollHeight;
+                        scrollToBottom(document.getElementById(id));
                     })
                     .catch(error => console.error(`Erro ao carregar comentário para ${id}:`, error));
             });

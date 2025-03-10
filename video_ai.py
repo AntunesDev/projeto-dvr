@@ -3,10 +3,11 @@ import torch
 import numpy as np
 import threading
 import random
+import time
 from ultralytics import YOLO
 
 # Carregar modelo YOLO pré-treinado
-model = YOLO("yolov5su.pt")
+model = YOLO("yolov5s.pt")
 
 # Histórico de análise por câmera
 previous_feedback = {
@@ -30,6 +31,11 @@ streams = {
     "video3": "http://localhost:3000/stream3.m3u8",
     "video4": "http://localhost:3000/stream4.m3u8"
 }
+
+# Limpa o histórico no início do script
+for video_id in streams.keys():
+    with open(f"public/{video_id}.txt", "w") as f:
+        f.write("")
 
 # Função para construir uma frase mais natural
 def generate_dynamic_description(detected_objects, previous_objects):
@@ -63,7 +69,6 @@ def generate_dynamic_description(detected_objects, previous_objects):
         else:
             descriptions.append(f"Há {count} {obj}s no local.")
 
-    # Gerar uma frase de forma aleatória para parecer mais natural
     if descriptions:
         return random.choice([
             "Parece que algo mudou: " + ", ".join(descriptions),
@@ -111,10 +116,14 @@ def analyze_stream(video_id, stream_url):
 
         feedback = analyze_frame(frame, video_id)
 
-        # Escrever no textarea apenas se houver mudança significativa
+        # Adicionar timestamp ao feedback
+        timestamp = time.strftime("[%H:%M:%S]")
+        entry = f"{timestamp} {feedback}\n"
+
+        # Escrever no arquivo de histórico sem sobrescrever
         if feedback != previous_feedback[video_id]:
-            with open(f"public/{video_id}.txt", "w") as f:
-                f.write(feedback)
+            with open(f"public/{video_id}.txt", "a") as f:
+                f.write(entry)
             previous_feedback[video_id] = feedback
         
         cv2.waitKey(1000)  # Espera 1 segundo antes do próximo frame
