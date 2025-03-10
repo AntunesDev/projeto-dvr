@@ -52,11 +52,13 @@ app.get("/stream", (req, res) => {
             "-b:a", "128k",
             "-strict", "experimental",
             "-f", "hls",
-            "-hls_time", "4",
-            "-hls_list_size", "10",
-            "-hls_delete_threshold", "2",
-            "-hls_flags", "split_by_time+program_date_time",
+            "-hls_time", "3",
+            "-hls_list_size", "15",
+            "-hls_delete_threshold", "10",
+            "-hls_flags", "delete_segments+program_date_time",
             "-hls_allow_cache", "1",
+            "-hls_playlist_type", "event",
+            "-hls_segment_filename", `public/stream${channel}_%03d.ts`,
             `public/stream${channel}.m3u8`
         ]);
 
