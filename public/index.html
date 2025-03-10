@@ -23,12 +23,10 @@
         }
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(2, 1fr);
+            grid-template-columns: 1fr 3fr 3fr 1fr;
             gap: 5px;
             width: 100%;
             height: 100%;
-            padding: 5px;
         }
         .video-container, textarea {
             width: 100%;
@@ -39,6 +37,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
         img {
             width: 100%;
@@ -49,8 +48,8 @@
             background-color: #2e2e2e;
             color: white;
             border: 1px solid #444;
-            padding: 10px;
-            font-size: 14px;
+            padding: 5px;
+            font-size: 12px;
             resize: none;
             overflow-y: auto;
         }
@@ -77,8 +76,7 @@
             const data = JSON.parse(event.data);
             if (data.channel && data.frame) {
                 const img = document.getElementById(data.channel);
-                if (img) 
-                {
+                if (img) {
                     img.src = `data:image/jpeg;base64,${data.frame}`;
                     loadComments();
                 }
