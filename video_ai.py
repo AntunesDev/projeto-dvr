@@ -7,7 +7,7 @@ import time
 from ultralytics import YOLO
 
 # Carregar modelo YOLO pré-treinado
-model = YOLO("yolov5s.pt")
+model = YOLO("yolov5su.pt")
 
 # Histórico de análise por câmera
 previous_feedback = {
@@ -42,42 +42,30 @@ def generate_dynamic_description(detected_objects, previous_objects):
     descriptions = []
 
     if not detected_objects:
-        return random.choice([
-            "A cena está vazia.",
-            "Nada de interessante acontecendo no momento.",
-            "O ambiente está tranquilo."
-        ])
+        return "A cena está vazia."
 
     for obj, count in detected_objects.items():
         previous_count = previous_objects.get(obj, 0)
 
-        # Se o número aumentou, alguém entrou na cena
         if count > previous_count:
             if count == 1:
                 descriptions.append(f"Um {obj} apareceu.")
             else:
                 descriptions.append(f"{count - previous_count} {obj}s entraram na cena.")
 
-        # Se o número diminuiu, algo saiu da cena
         elif count < previous_count:
             if previous_count == 1:
                 descriptions.append(f"O {obj} saiu da cena.")
             else:
                 descriptions.append(f"{previous_count - count} {obj}s saíram da cena.")
 
-        # Se a quantidade se manteve, mas houve movimento, adicionar contexto
         else:
             descriptions.append(f"Há {count} {obj}s no local.")
 
     if descriptions:
-        return random.choice([
-            "Parece que algo mudou: " + ", ".join(descriptions),
-            "Atualização na cena: " + ", ".join(descriptions),
-            "Mudança detectada: " + ", ".join(descriptions),
-            "O que estou vendo agora: " + ", ".join(descriptions)
-        ])
+        return "Mudança detectada: " + ", ".join(descriptions)
 
-    return "Nada mudou na cena."
+    return None  # Não retorna nada se nada mudou
 
 # Função para processar um frame
 def analyze_frame(frame, video_id):
@@ -116,14 +104,13 @@ def analyze_stream(video_id, stream_url):
 
         feedback = analyze_frame(frame, video_id)
 
-        # Adicionar timestamp ao feedback
-        timestamp = time.strftime("[%H:%M:%S]")
-        entry = f"{timestamp} {feedback}\n"
+        if feedback and feedback != previous_feedback[video_id]:
+            timestamp = time.strftime("[%H:%M:%S]")
+            entry = f"{timestamp} {feedback}\n"
 
-        # Escrever no arquivo de histórico sem sobrescrever
-        if feedback != previous_feedback[video_id]:
             with open(f"public/{video_id}.txt", "a") as f:
                 f.write(entry)
+
             previous_feedback[video_id] = feedback
         
         cv2.waitKey(1000)  # Espera 1 segundo antes do próximo frame
