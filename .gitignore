@@ -139,3 +139,4 @@ package-lock.json
 # python
 venv/
 yolov*
+public/video*.txt

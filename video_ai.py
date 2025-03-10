@@ -2,17 +2,25 @@ import cv2
 import torch
 import numpy as np
 import threading
+import random
 from ultralytics import YOLO
 
 # Carregar modelo YOLO pré-treinado
-model = YOLO("yolov5s.pt")
+model = YOLO("yolov5su.pt")
 
-# Mapeamento de feedback por câmera
+# Histórico de análise por câmera
 previous_feedback = {
     "video1": None,
     "video2": None,
     "video3": None,
     "video4": None
+}
+
+object_count_history = {
+    "video1": {},
+    "video2": {},
+    "video3": {},
+    "video4": {}
 }
 
 # URLs dos streams
@@ -23,20 +31,67 @@ streams = {
     "video4": "http://localhost:3000/stream4.m3u8"
 }
 
-# Função para gerar descrição do vídeo
-def analyze_frame(frame):
-    results = model(frame)
-    labels = results[0].names
-
-    detected_objects = []
-    for obj in results[0].boxes:
-        class_id = int(obj.cls)
-        detected_objects.append(labels[class_id])
+# Função para construir uma frase mais natural
+def generate_dynamic_description(detected_objects, previous_objects):
+    descriptions = []
 
     if not detected_objects:
-        return "Nada está acontecendo."
+        return random.choice([
+            "A cena está vazia.",
+            "Nada de interessante acontecendo no momento.",
+            "O ambiente está tranquilo."
+        ])
 
-    return f"Detectado: {', '.join(set(detected_objects))}"
+    for obj, count in detected_objects.items():
+        previous_count = previous_objects.get(obj, 0)
+
+        # Se o número aumentou, alguém entrou na cena
+        if count > previous_count:
+            if count == 1:
+                descriptions.append(f"Um {obj} apareceu.")
+            else:
+                descriptions.append(f"{count - previous_count} {obj}s entraram na cena.")
+
+        # Se o número diminuiu, algo saiu da cena
+        elif count < previous_count:
+            if previous_count == 1:
+                descriptions.append(f"O {obj} saiu da cena.")
+            else:
+                descriptions.append(f"{previous_count - count} {obj}s saíram da cena.")
+
+        # Se a quantidade se manteve, mas houve movimento, adicionar contexto
+        else:
+            descriptions.append(f"Há {count} {obj}s no local.")
+
+    # Gerar uma frase de forma aleatória para parecer mais natural
+    if descriptions:
+        return random.choice([
+            "Parece que algo mudou: " + ", ".join(descriptions),
+            "Atualização na cena: " + ", ".join(descriptions),
+            "Mudança detectada: " + ", ".join(descriptions),
+            "O que estou vendo agora: " + ", ".join(descriptions)
+        ])
+
+    return "Nada mudou na cena."
+
+# Função para processar um frame
+def analyze_frame(frame, video_id):
+    results = model(frame)
+    labels = results[0].names
+    detected_objects = {}
+
+    for obj in results[0].boxes:
+        class_id = int(obj.cls)
+        label = labels[class_id]
+        detected_objects[label] = detected_objects.get(label, 0) + 1
+
+    # Criar descrição dinâmica baseada na comparação com o estado anterior
+    feedback = generate_dynamic_description(detected_objects, object_count_history[video_id])
+
+    # Atualizar histórico de detecção
+    object_count_history[video_id] = detected_objects
+
+    return feedback
 
 # Loop para cada stream
 def analyze_stream(video_id, stream_url):
@@ -54,8 +109,9 @@ def analyze_stream(video_id, stream_url):
         if not ret:
             break
 
-        feedback = analyze_frame(frame)
+        feedback = analyze_frame(frame, video_id)
 
+        # Escrever no textarea apenas se houver mudança significativa
         if feedback != previous_feedback[video_id]:
             with open(f"public/{video_id}.txt", "w") as f:
                 f.write(feedback)
