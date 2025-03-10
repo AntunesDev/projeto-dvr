@@ -1,9 +1,12 @@
 import cv2
-import torch
 import numpy as np
-import threading
-import random
+import torch
 import time
+import threading
+import base64
+import json
+import websocket
+
 from ultralytics import YOLO
 
 # Carregar modelo YOLO pré-treinado
@@ -24,20 +27,21 @@ object_count_history = {
     "video4": {}
 }
 
-# URLs dos streams
-streams = {
-    "video1": "http://localhost:3000/stream1.m3u8",
-    "video2": "http://localhost:3000/stream2.m3u8",
-    "video3": "http://localhost:3000/stream3.m3u8",
-    "video4": "http://localhost:3000/stream4.m3u8"
-}
-
-# Limpa o histórico no início do script
-for video_id in streams.keys():
+# Limpa os arquivos de log no início do script
+for video_id in previous_feedback.keys():
     with open(f"public/{video_id}.txt", "w") as f:
         f.write("")
 
-# Função para construir uma frase mais natural
+# Conecta ao WebSocket do servidor Node.js
+WS_URL = "ws://localhost:3000"
+
+# Converte base64 para frame OpenCV
+def decode_frame(base64_data):
+    img_bytes = base64.b64decode(base64_data)
+    np_arr = np.frombuffer(img_bytes, dtype=np.uint8)
+    return cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+# Função para gerar descrição detalhada
 def generate_dynamic_description(detected_objects, previous_objects):
     descriptions = []
 
@@ -62,10 +66,7 @@ def generate_dynamic_description(detected_objects, previous_objects):
         else:
             descriptions.append(f"Há {count} {obj}s no local.")
 
-    if descriptions:
-        return "Mudança detectada: " + ", ".join(descriptions)
-
-    return None  # Não retorna nada se nada mudou
+    return "Mudança detectada: " + ", ".join(descriptions) if descriptions else None
 
 # Função para processar um frame
 def analyze_frame(frame, video_id):
@@ -78,7 +79,7 @@ def analyze_frame(frame, video_id):
         label = labels[class_id]
         detected_objects[label] = detected_objects.get(label, 0) + 1
 
-    # Criar descrição dinâmica baseada na comparação com o estado anterior
+    # Criar descrição baseada na comparação com o estado anterior
     feedback = generate_dynamic_description(detected_objects, object_count_history[video_id])
 
     # Atualizar histórico de detecção
@@ -86,44 +87,33 @@ def analyze_frame(frame, video_id):
 
     return feedback
 
-# Loop para cada stream
-def analyze_stream(video_id, stream_url):
+# Função para processar mensagens WebSocket
+def on_message(ws, message):
     global previous_feedback
 
-    cap = cv2.VideoCapture(stream_url)
-    if not cap.isOpened():
-        print(f"Erro ao abrir {stream_url}")
-        return
-    
-    print(f"📡 Analisando {video_id}...")
+    data = json.loads(message)
+    channel = data["channel"]
+    frame = decode_frame(data["frame"])
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    feedback = analyze_frame(frame, channel)
 
-        feedback = analyze_frame(frame, video_id)
+    # Apenas registrar mudanças reais
+    if feedback and feedback != previous_feedback[channel]:
+        timestamp = time.strftime("[%H:%M:%S]")
+        entry = f"{timestamp} {feedback}\n"
 
-        if feedback and feedback != previous_feedback[video_id]:
-            timestamp = time.strftime("[%H:%M:%S]")
-            entry = f"{timestamp} {feedback}\n"
+        with open(f"public/{channel}.txt", "a") as f:
+            f.write(entry)
 
-            with open(f"public/{video_id}.txt", "a") as f:
-                f.write(entry)
+        previous_feedback[channel] = feedback
 
-            previous_feedback[video_id] = feedback
-        
-        cv2.waitKey(1000)  # Espera 1 segundo antes do próximo frame
+# Configurações do WebSocket
+def start_websocket():
+    ws = websocket.WebSocketApp(WS_URL, on_message=on_message)
+    ws.run_forever()
 
-    cap.release()
+# Criar thread para o WebSocket
+threading.Thread(target=start_websocket, daemon=True).start()
 
-# Criar threads para cada stream
-threads = []
-for video_id, stream_url in streams.items():
-    thread = threading.Thread(target=analyze_stream, args=(video_id, stream_url))
-    thread.start()
-    threads.append(thread)
-
-# Aguarda todas as threads terminarem
-for thread in threads:
-    thread.join()
+while True:
+    time.sleep(1)

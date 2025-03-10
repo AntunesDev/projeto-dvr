@@ -77,7 +77,11 @@
             const data = JSON.parse(event.data);
             if (data.channel && data.frame) {
                 const img = document.getElementById(data.channel);
-                if (img) img.src = `data:image/jpeg;base64,${data.frame}`;
+                if (img) 
+                {
+                    img.src = `data:image/jpeg;base64,${data.frame}`;
+                    loadComments();
+                }
             }
         };
 
@@ -108,7 +112,6 @@
             });
         }
 
-        setInterval(loadComments, 5000);
         loadComments();
     </script>
 
